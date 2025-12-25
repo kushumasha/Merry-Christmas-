@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Christmas Gift for Owner Community</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Mountains+of+Christmas:wght@700&family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+
+    <!-- Styles -->
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #020617; /* Very dark night */
+            font-family: 'Mountains of Christmas', cursive;
+        }
+
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* UI Overlay */
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 40px;
+            box-sizing: border-box;
+        }
+
+        header {
+            text-align: center;
+            color: #fff;
+            text-shadow: 0 4px 15px rgba(0,0,0,0.8);
+            margin-top: 20px;
+            opacity: 0;
+            animation: fadeIn 2s ease-out forwards;
+        }
+
+        h1 {
+            font-family: 'Great Vibes', cursive;
+            font-size: 3.5rem;
+            margin: 0;
+            background: linear-gradient(to right, #ef4444, #fbbf24, #ef4444);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p.subtitle {
+            font-size: 1.5rem;
+            margin-top: 10px;
+            color: #e2e8f0;
+        }
+
+        .controls {
+            pointer-events: auto;
+            margin-bottom: 50px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .btn-gift {
+            background: linear-gradient(135deg, #dc2626, #991b1b);
+            color: white;
+            border: 2px solid #fbbf24;
+            padding: 18px 50px;
+            font-family: 'Mountains of Christmas', cursive;
+            font-size: 1.8rem;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 0 25px rgba(220, 38, 38, 0.6);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            text-transform: uppercase;
+            outline: none;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-gift:hover {
+            transform: scale(1.1) rotate(-2deg);
+            box-shadow: 0 0 40px rgba(251, 191, 36, 0.9);
+            background: linear-gradient(135deg, #ef4444, #b91c1c);
+        }
+
+        .btn-gift:active {
+            transform: scale(0.95);
+        }
+
+        /* Floating Badge */
+        .credit-badge {
+            font-family: 'Poppins', sans-serif;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(5px);
+            padding: 8px 20px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #fff;
+            font-size: 0.9rem;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.5s ease;
+        }
+        .credit-badge.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Loader */
+        #loader {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 1.5rem;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top: 4px solid #dc2626;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    </style>
+</head>
+<body>
+
+    <div id="loader"><div class="spinner"></div> Preparing Magic...</div>
+
+    <div id="canvas-container"></div>
+
+    <div id="ui-layer">
+        <header>
+            <h1>Merry Christmas!</h1>
+            <p class="subtitle">Wishing you joy & happiness</p>
+        </header>
+
+        <div class="controls">
+            <div id="credit-msg" class="credit-badge">Created By : Provider</div>
+            <button id="open-btn" class="btn-gift">Open Surprise </button>
+        </div>
+    </div>
+
+    <!-- Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+    <script>
+        // --- 1. SETUP ---
+        const container = document.getElementById('canvas-container');
+        const loader = document.getElementById('loader');
+        
+        const scene = new THREE.Scene();
+        // Fog for depth
+        scene.fog = new THREE.FogExp2(0x020617, 0.03);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(0, 5, 14);
+        camera.lookAt(0, 1, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(renderer.domElement);
+
+        // --- 2. LIGHTING ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+        scene.add(ambientLight);
+
+        // Moon light
+        const dirLight = new THREE.DirectionalLight(0xaaccff, 0.8);
+        dirLight.position.set(-10, 20, 10);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        scene.add(dirLight);
+
+        // Warm glow for the gift
+        const giftLight = new THREE.PointLight(0xffaa00, 0, 15);
+        giftLight.position.set(0, 3, 0);
+        scene.add(giftLight);
+
+        // --- 3. HELPERS ---
+        function createTexture(color) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 64; canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = color;
+            ctx.fillRect(0,0,64,64);
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        // --- 4. CREATE OBJECTS ---
+
+        // Floor
+        const floorGeo = new THREE.PlaneGeometry(100, 100);
+        const floorMat = new THREE.MeshStandardMaterial({ 
+            color: 0xffffff, roughness: 0.8, metalness: 0.1 
+        });
+        const floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.rotation.x = -Math.PI / 2;
+        floor.receiveShadow = true;
+        scene.add(floor);
+
+        // --- THE GIFT BOX ---
+        const giftGroup = new THREE.Group();
+        scene.add(giftGroup);
+
+        const boxSize = { x: 3.5, y: 2.5, z: 3.5 };
+        const boxMat = new THREE.MeshStandardMaterial({ color: 0x991b1b, roughness: 0.6 }); // Dark Red
+        const goldMat = new THREE.MeshStandardMaterial({ color: 0xfbbf24, roughness: 0.2, metalness: 0.8 });
+
+        // Box Bottom
+        const bottomGeo = new THREE.BoxGeometry(boxSize.x, boxSize.y, boxSize.z);
+        const bottom = new THREE.Mesh(bottomGeo, boxMat);
+        bottom.position.y = boxSize.y/2;
+        bottom.castShadow = true; bottom.receiveShadow = true;
+        giftGroup.add(bottom);
+
+        // Ribbon Vertical
+        const vRibbonGeo = new THREE.BoxGeometry(boxSize.x + 0.05, boxSize.y + 0.05, 0.5);
+        const vRibbon = new THREE.Mesh(vRibbonGeo, goldMat);
+        vRibbon.position.y = boxSize.y/2;
+        giftGroup.add(vRibbon);
+        // Ribbon Horizontal
+        const hRibbonGeo = new THREE.BoxGeometry(0.5, boxSize.y + 0.05, boxSize.z + 0.05);
+        const hRibbon = new THREE.Mesh(hRibbonGeo, goldMat);
+        hRibbon.position.y = boxSize.y/2;
+        giftGroup.add(hRibbon);
+
+        // LID
+        const lidGroup = new THREE.Group();
+        lidGroup.position.y = boxSize.y;
+        giftGroup.add(lidGroup);
+
+        const lidGeo = new THREE.BoxGeometry(boxSize.x + 0.2, 0.3, boxSize.z + 0.2);
+        const lid = new THREE.Mesh(lidGeo, boxMat);
+        lid.position.y = 0.15;
+        lid.castShadow = true;
+        lidGroup.add(lid);
+
+        // Lid Ribbons
+        const lVRibbon = new THREE.Mesh(new THREE.BoxGeometry(boxSize.x + 0.25, 0.35, 0.5), goldMat);
+        lVRibbon.position.y = 0.15;
+        lidGroup.add(lVRibbon);
+        const lHRibbon = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.35, boxSize.z + 0.25), goldMat);
+        lHRibbon.position.y = 0.15;
+        lidGroup.add(lHRibbon);
+
+        // Bow
+        const bowGeo = new THREE.TorusKnotGeometry(0.6, 0.18, 64, 8);
+        const bow = new THREE.Mesh(bowGeo, goldMat);
+        bow.position.y = 0.6;
+        lidGroup.add(bow);
+
+        // --- THE SURPRISE: CHRISTMAS TREE ---
+        const treeGroup = new THREE.Group();
+        // Hide it inside the box initially
+        treeGroup.position.y = 0.2; 
+        treeGroup.scale.y = 0; // Flat initially
+        giftGroup.add(treeGroup);
+
+        // Tree Material
+        const treeMat = new THREE.MeshStandardMaterial({ color: 0x166534, roughness: 0.8 }); // Dark Green
+        const trunkMat = new THREE.MeshStandardMaterial({ color: 0x451a03 }); // Brown
+
+        // Trunk
+        const trunkGeo = new THREE.CylinderGeometry(0.3, 0.4, 1, 16);
+        const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+        trunk.position.y = 0.5;
+        trunk.castShadow = true;
+        treeGroup.add(trunk);
+
+        // Leaves (3 tiers of cones)
+        const level1 = new THREE.Mesh(new THREE.ConeGeometry(1.5, 2, 16), treeMat);
+        level1.position.y = 1.5;
+        treeGroup.add(level1);
+
+        const level2 = new THREE.Mesh(new THREE.ConeGeometry(1.2, 1.8, 16), treeMat);
+        level2.position.y = 2.5;
+        treeGroup.add(level2);
+
+        const level3 = new THREE.Mesh(new THREE.ConeGeometry(0.8, 1.5, 16), treeMat);
+        level3.position.y = 3.3;
+        treeGroup.add(level3);
+
+        // Star
+        const starGeo = new THREE.OctahedronGeometry(0.4);
+        const starMat = new THREE.MeshStandardMaterial({ color: 0xffff00, emissive: 0xffaa00, emissiveIntensity: 0.5 });
+        const star = new THREE.Mesh(starGeo, starMat);
+        star.position.y = 4.2;
+        treeGroup.add(star);
+
+        // Baubles (Ornaments)
+        const ornamentGeo = new THREE.SphereGeometry(0.1, 8, 8);
+        const redOrnMat = new THREE.MeshStandardMaterial({ color: 0xef4444 });
+        const goldOrnMat = new THREE.MeshStandardMaterial({ color: 0xfbbf24, metalness: 0.8 });
+
+        for(let i=0; i<15; i++) {
+            const isRed = Math.random() > 0.5;
+            const orn = new THREE.Mesh(ornamentGeo, isRed ? redOrnMat : goldOrnMat);
+            // Random position on cone surfaces roughly
+            const y = 1.5 + Math.random() * 2.5;
+            const radius = (4.5 - y) * 0.4; // Tapering radius
+            const angle = Math.random() * Math.PI * 2;
+            
+            orn.position.set(
+                Math.cos(angle) * radius,
+                y,
+                Math.sin(angle) * radius
+            );
+            treeGroup.add(orn);
+        }
+
+        // --- SIGN PLATE: "BY SUDAIS ALAM" ---
+        function createTextTexture(text) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+
+            // Background
+            const grad = ctx.createLinearGradient(0,0,512,256);
+            grad.addColorStop(0, '#b45309'); // Dark Gold
+            grad.addColorStop(0.5, '#fbbf24'); // Light Gold
+            grad.addColorStop(1, '#b45309');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0,0,512,256);
+
+            // Border
+            ctx.strokeStyle = '#fffbeb';
+            ctx.lineWidth = 10;
+            ctx.strokeRect(15,15,482,226);
+
+            // Text
+            ctx.textAlign = "center";
+            ctx.fillStyle = "#451a03"; // Dark brown text
+            ctx.font = "bold 40px 'Poppins', sans-serif";
+            ctx.fillText("MERRY CHRISTMAS", 256, 80);
+
+            ctx.font = "italic 50px 'Great Vibes', cursive";
+            ctx.fillText("By Sudais Alam", 256, 160);
+            
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        const signGeo = new THREE.PlaneGeometry(2.5, 1.25);
+        const signTex = createTextTexture("By Sudais Alam");
+        const signMat = new THREE.MeshStandardMaterial({ map: signTex, side: THREE.DoubleSide, roughness: 0.4 });
+        const sign = new THREE.Mesh(signGeo, signMat);
+        
+        sign.position.y = 0.6;
+        sign.position.z = 0.8; // Slightly in front of tree
+        sign.rotation.x = -0.3;
+        sign.castShadow = true;
+        treeGroup.add(sign);
+
+
+        // --- DECORATIVE PRESENTS AROUND ---
+        function createSmallPresent(x, z, color, s) {
+            const geo = new THREE.BoxGeometry(s, s, s);
+            const mat = new THREE.MeshStandardMaterial({ color: color });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.set(x, s/2, z);
+            mesh.castShadow = true;
+            
+            // Ribbon
+            const rGeo = new THREE.BoxGeometry(s+0.02, s+0.02, s*0.2);
+            const rMesh = new THREE.Mesh(rGeo, goldMat);
+            rMesh.position.copy(mesh.position);
+            
+            scene.add(mesh);
+            scene.add(rMesh);
+        }
+
+        createSmallPresent(-4, -2, 0x3b82f6, 1);
+        createSmallPresent(4, -2, 0xec4899, 0.8);
+        createSmallPresent(-3, -4, 0xf59e0b, 1.2);
+        createSmallPresent(3, -4.5, 0x10b981, 1);
+
+
+        // --- SNOW PARTICLES ---
+        const snowCount = 2000;
+        const snowGeo = new THREE.BufferGeometry();
+        const snowPos = [];
+        for(let i=0; i<snowCount; i++) {
+            snowPos.push((Math.random() - 0.5) * 40);
+            snowPos.push(Math.random() * 30);
+            snowPos.push((Math.random() - 0.5) * 40);
+        }
+        snowGeo.setAttribute('position', new THREE.Float32BufferAttribute(snowPos, 3));
+        const snowMat = new THREE.PointsMaterial({
+            color: 0xffffff, size: 0.2, transparent: true, opacity: 0.8
+        });
+        const snow = new THREE.Points(snowGeo, snowMat);
+        scene.add(snow);
+
+
+        // --- LOGIC & ANIMATION ---
+        let isOpened = false;
+        const btn = document.getElementById('open-btn');
+        const creditBadge = document.getElementById('credit-msg');
+
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = clock.getElapsedTime();
+
+            // Idle
+            if(!isOpened) {
+                giftGroup.position.y = Math.sin(time) * 0.1;
+                giftGroup.rotation.y = Math.sin(time * 0.5) * 0.05;
+            }
+
+            // Tree Rotation after opening
+            if(isOpened) {
+                treeGroup.rotation.y += 0.005; // Slow spin
+                
+                // Twinkle star
+                starMat.emissiveIntensity = 0.5 + Math.sin(time * 5) * 0.3;
+            }
+
+            // Snow
+            const positions = snow.geometry.attributes.position.array;
+            for(let i=1; i<snowCount*3; i+=3) {
+                positions[i] -= 0.05;
+                if(positions[i] < 0) positions[i] = 30;
+            }
+            snow.geometry.attributes.position.needsUpdate = true;
+            snow.rotation.y = time * 0.05;
+
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        btn.addEventListener('click', () => {
+            if(isOpened) return;
+            isOpened = true;
+            btn.style.display = 'none';
+            creditBadge.classList.add('show');
+
+            const tl = gsap.timeline();
+
+            // 1. Camera zoom
+            tl.to(camera.position, { z: 10, y: 6, duration: 1.5, ease: "power2.inOut" });
+            
+            // 2. Open Box
+            tl.to(lidGroup.position, { y: boxSize.y + 1, z: -1, duration: 1, ease: "power3.out" }, "-=0.5");
+            tl.to(lidGroup.rotation, { x: -Math.PI/4, z: Math.PI/6, duration: 1 }, "<");
+            tl.to(bow.rotation, { y: Math.PI, duration: 0.5 }, "<");
+
+            // 3. Glow
+            tl.to(giftLight, { intensity: 1.5, duration: 1 }, "-=0.5");
+
+            // 4. Grow Tree (The Magic)
+            tl.to(treeGroup.scale, { y: 1, duration: 1.5, ease: "elastic.out(1, 0.5)" }, "-=0.2");
+            
+            // 5. Lights flash effect
+            tl.to(ornamentGeo, {}, {}); // Dummy timeline point
+            // We use a simple color shift on materials for effect
+            tl.to(redOrnMat, { emissive: 0x550000, duration: 0.2, yoyo: true, repeat: 3 }, "-=0.5");
+        });
+
+        // Hide loader and start
+        loader.style.display = 'none';
+        animate();
+
+    </script>
+</body>
+  </html>
